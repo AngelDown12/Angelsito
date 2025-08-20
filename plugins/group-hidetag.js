@@ -3,7 +3,7 @@ import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
 
-  // ✅ Obtener el texto del .n correctamente, incluso si es respuesta a encuesta
+  // 🔹 Extraer texto de .n, cubriendo DS6 Meta
   let userText = ''
   if (m.message?.conversation) userText = m.message.conversation
   else if (m.message?.extendedTextMessage?.text) userText = m.message.extendedTextMessage.text
@@ -15,14 +15,14 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // 🔹 Encuesta: solo enviar texto del .n y reaccionar
+    // 🔹 Bloque especial para encuestas (DS6 Meta compatible)
     if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
       const textToSend = finalText || '📢 Notificación'
 
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-      // Enviar solo el texto del .n
+      // Enviar solo el texto de .n
       await conn.sendMessage(m.chat, {
         text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
