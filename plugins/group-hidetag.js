@@ -32,11 +32,11 @@ const handler = async (m, { conn, participants }) => {
     // 🔹 Reacción 📢 solo si NO es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 Multimedia → mandar archivo + texto (combinando caption original)
+    // 🔹 Multimedia → mandar archivo + texto + firma (manteniendo el caption original)
     if (isMedia) {
       const media = await q.download()
       const originalCaption = q.msg?.caption || ''
-      const captionText = `${finalText || originalCaption}${(finalText || originalCaption) ? '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
+      const captionText = `${originalCaption}${finalText ? '\n' + finalText : ''}${(originalCaption || finalText) ? '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
       if (mtype === 'imageMessage') {
         await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
