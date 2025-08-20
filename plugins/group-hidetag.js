@@ -19,19 +19,18 @@ const handler = async (m, { conn, participants }) => {
     if (q.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
-
-    // 🔹 Captions originales
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
-    // 🔹 Encuesta → usar cMod si es mensaje citado, si no mandar texto normal
+    // 🔹 Lógica de encuesta ORIGINAL
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      if (m.quoted && !isMedia) {
+      if (m.quoted) {
+        // usar cMod para reemplazar texto de la encuesta
         const msg = conn.cMod(
           m.chat,
           generateWAMessageFromContent(
             m.chat,
-            { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalText } },
+            { [mtype]: q.message?.[mtype] || { text: finalText } },
             { quoted: m, userJid: conn.user.id }
           ),
           captionText,
@@ -41,6 +40,7 @@ const handler = async (m, { conn, participants }) => {
         await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
         return
       } else {
+        // si no hay mensaje citado, mandar solo texto + firma
         await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         return
       }
@@ -67,7 +67,7 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Mensajes normales → conservar diálogo + enviar tu texto + firma
+    // 🔹 Mensajes normales → usar cMod si hay mensaje citado, si no enviar texto normal
     if (m.quoted && !isMedia) {
       const msg = conn.cMod(
         m.chat,
