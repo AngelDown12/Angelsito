@@ -35,16 +35,17 @@ const handler = async (m, { conn, participants }) => {
     // 🔹 Multimedia → mandar archivo + texto
     if (isMedia) {
       const media = await q.download()
+      const captionText = `${finalText}${finalText ? '\n\n' : ''}${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`
       if (mtype === 'imageMessage') {
-        await conn.sendMessage(m.chat, { image: media, caption: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
       } else if (mtype === 'videoMessage') {
-        await conn.sendMessage(m.chat, { video: media, caption: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
+        await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
       } else if (mtype === 'stickerMessage') {
         await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
       } else if (mtype === 'audioMessage') {
         await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
       }
       return
     }
