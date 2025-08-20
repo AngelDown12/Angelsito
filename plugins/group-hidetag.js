@@ -20,7 +20,11 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // 🔹 Encuesta → mandar texto + firma usando cMod si es mensaje citado
+    // 🔹 Captions originales
+    const originalCaption = (q.msg?.caption || q.text || '').trim()
+    const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
+
+    // 🔹 Encuesta → usar cMod si es mensaje citado, si no mandar texto normal
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       if (m.quoted && !isMedia) {
         const msg = conn.cMod(
@@ -30,18 +34,14 @@ const handler = async (m, { conn, participants }) => {
             { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalText } },
             { quoted: m, userJid: conn.user.id }
           ),
-          `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+          captionText,
           conn.user.jid,
           { mentions: users }
         )
         await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
         return
       } else {
-        // Si no es mensaje citado, mandar solo texto normal
-        await conn.sendMessage(m.chat, {
-          text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-          mentions: users
-        }, { quoted: m })
+        await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         return
       }
     }
@@ -49,10 +49,9 @@ const handler = async (m, { conn, participants }) => {
     // 🔹 Reacción 📢 solo si NO es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 Multimedia → mandar archivo + texto + firma
+    // 🔹 Multimedia → enviar archivo + caption original + texto + firma
     if (isMedia) {
       const media = await q.download()
-      const captionText = `${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
       if (mtype === 'imageMessage') {
         await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
@@ -68,11 +67,28 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Mensajes normales → mandar texto
-    await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+    // 🔹 Mensajes normales → conservar diálogo + enviar tu texto + firma
+    if (m.quoted && !isMedia) {
+      const msg = conn.cMod(
+        m.chat,
+        generateWAMessageFromContent(
+          m.chat,
+          { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalText } },
+          { quoted: m, userJid: conn.user.id }
+        ),
+        captionText,
+        conn.user.jid,
+        { mentions: users }
+      )
+      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
+      return
+    }
+
+    // Si no hay mensaje citado ni multimedia, mandar solo texto normal
+    await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
 
   } catch (e) {
-    await conn.sendMessage(m.chat, { text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: `📢 Notificación\n\n> 𝙱𝚄𝚄 𝙱𝙾𝚃`, mentions: users }, { quoted: m })
   }
 }
 
