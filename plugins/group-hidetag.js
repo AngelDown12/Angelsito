@@ -14,7 +14,7 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     let mtype = q.mtype || ''
 
-    // 🔹 Detectar encuestas DS6 Meta
+    // 🔹 Detectar encuestas DS6 Meta en cualquier mensaje (citado o directo)
     if (q.message?.pollCreationMessage) mtype = 'pollCreationMessage'
     if (q.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
@@ -22,14 +22,14 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
-    // 🔹 Si hay mensaje citado, usar cMod para mantener todo intacto (encuestas, texto, multimedia)
-    if (m.quoted) {
+    // 🔹 Si es encuesta → enviar tu texto + firma, preservando encuesta
+    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       const msg = conn.cMod(
         m.chat,
         generateWAMessageFromContent(
           m.chat,
-          { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalText } },
-          { quoted: m, userJid: conn.user.id }
+          { [mtype]: q.message?.[mtype] || { text: finalText } },
+          { quoted: q, userJid: conn.user.id }
         ),
         captionText,
         conn.user.jid,
@@ -39,12 +39,13 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Reacción 📢 solo si no hay mensaje citado
+    // 🔹 Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 Multimedia sin mensaje citado
+    // 🔹 Multimedia → conservar captions + agregar tu texto
     if (isMedia) {
       const media = await q.download()
+
       if (mtype === 'imageMessage') {
         await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
       } else if (mtype === 'videoMessage') {
@@ -59,7 +60,7 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Si no hay mensaje citado ni multimedia → enviar texto normal
+    // 🔹 Mensajes normales → enviar texto + firma
     await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
 
   } catch (e) {
