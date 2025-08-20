@@ -16,10 +16,11 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // Nuevo bloque para encuestas
+    // Bloque para encuestas: ignora la encuesta y usa solo el texto del .n
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
+      const textToSend = finalText || '📢 Notificación'
       await conn.sendMessage(m.chat, {
-        text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+        text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
       }, { quoted: m })
       return
