@@ -15,14 +15,14 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // 🔹 Bloque para encuestas: siempre usar el texto de .n y reaccionar
-    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
+    // 🔹 Lógica integrada de encuestas: solo enviar texto del .n y reaccionar
+    if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
       const textToSend = finalText || '📢 Notificación'
 
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-      // Enviar solo el texto del .n
+      // Enviar solo el texto de .n
       await conn.sendMessage(m.chat, {
         text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
