@@ -13,11 +13,8 @@ const handler = async (m, { conn, participants }) => {
   try {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
-    const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
-    const originalCaption = (q.msg?.caption || q.text || '').trim()
-    const finalCaption = finalText || originalCaption || '📢 Notificación'
 
-    // 🔹 Bloque especial para encuestas (misma lógica del otro código)
+    // 🔹 Bloque especial para encuestas
     if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
@@ -29,8 +26,12 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // Reaccionar normalmente a cualquier otro mensaje
+    // 🔹 Reaccionar normalmente a cualquier otro mensaje
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
+
+    const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
+    const originalCaption = (q.msg?.caption || q.text || '').trim()
+    const finalCaption = finalText || originalCaption || '📢 Notificación'
 
     if (m.quoted && isMedia) {
       const media = await q.download()
