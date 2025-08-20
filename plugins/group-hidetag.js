@@ -35,18 +35,12 @@ const handler = async (m, { conn, participants }) => {
         const media = await q.download()
         let msgContent = {}
 
-        if (mtype === 'imageMessage') {
-          msgContent = { 
-            image: media, 
-            caption: `${finalText || originalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users 
-          }
-        } else if (mtype === 'videoMessage') {
-          msgContent = { 
-            video: media, 
-            caption: `${finalText || originalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users, 
-            mimetype: 'video/mp4' 
+        if (mtype === 'imageMessage' || mtype === 'videoMessage') {
+          msgContent = {
+            [mtype === 'imageMessage' ? 'image' : 'video']: media,
+            caption: `${finalText || originalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+            mentions: users,
+            mimetype: mtype === 'videoMessage' ? 'video/mp4' : undefined
           }
         } else if (mtype === 'stickerMessage') {
           msgContent = { sticker: media, mentions: users }
@@ -54,9 +48,9 @@ const handler = async (m, { conn, participants }) => {
           msgContent = { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }
         }
 
-        await conn.sendMessage(m.chat, msgContent, { quoted: m })
+        await conn.sendMessage(m.chat, msgContent, { quoted: q })
 
-        // Si es media que no sea audio, manda también el texto si lo hay
+        // Para media que no sea audio, si hay texto extra, envíalo aparte
         if (userText && mtype !== 'audioMessage') {
           await conn.sendMessage(m.chat, { 
             text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
