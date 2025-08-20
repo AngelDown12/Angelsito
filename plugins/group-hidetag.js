@@ -19,7 +19,10 @@ const handler = async (m, { conn, participants }) => {
     if (q.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
-    const originalCaption = (isMedia ? q.msg?.caption : '').trim()
+
+    // 🔹 Captions multimedia: ignorar si ya empieza con .n
+    let originalCaption = (isMedia ? q.msg?.caption : '').trim()
+    if (/^\.?n(\s|$)/i.test(originalCaption)) originalCaption = ''
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
     // 🔹 ENCUESTAS → reemplazar texto directamente
@@ -42,7 +45,7 @@ const handler = async (m, { conn, participants }) => {
     // 🔹 Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 MULTIMEDIA → conservar captions + agregar tu texto
+    // 🔹 MULTIMEDIA → conservar captions (solo si no empiezan con .n) + agregar tu texto
     if (isMedia) {
       const media = await q.download()
       if (mtype === 'imageMessage') {
