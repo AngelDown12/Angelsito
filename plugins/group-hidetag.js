@@ -11,14 +11,17 @@ const handler = async (m, { conn, participants }) => {
   const users = participants.map(u => conn.decodeJid(u.id))
 
   try {
-    const q = m.quoted ? m.quoted : m
-    const mtype = q.mtype || ''
+    // 🔹 Detectar mensaje citado
+    let q = m.quoted ? m.quoted : m
+    let mtype = q.mtype || ''
+
+    // 🔹 Detectar encuestas dentro de contextInfo (DS6 Meta)
+    if (m.quoted?.message?.pollCreationMessage) mtype = 'pollCreationMessage'
+    if (m.quoted?.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
     // 🔹 Bloque especial para encuestas
-    if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
-      // Reaccionar al mensaje original
+    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
-      // Enviar el texto del .n como mensaje citado
       await conn.sendMessage(m.chat, {
         text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
