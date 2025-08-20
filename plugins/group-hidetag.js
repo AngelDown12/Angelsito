@@ -19,38 +19,33 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // EXTRAER TEXTO REAL DE LA MEDIA O EXTENDED / EPHEMERAL
+    // FUNCIONES PARA OBTENER TEXTO REAL DE LA MEDIA
     let mediaCaption = ''
     let mediaMessage = null
 
-    // Imagen
-    if (q.message?.imageMessage) {
-      mediaCaption = q.message.imageMessage.caption || q.message.extendedTextMessage?.text || ''
-      mediaMessage = q.message.imageMessage
+    const getTextFromMessage = (msg) => {
+      if (!msg) return ''
+      return msg.imageMessage?.caption
+          || msg.videoMessage?.caption
+          || msg.audioMessage?.caption
+          || msg.stickerMessage?.caption
+          || msg.extendedTextMessage?.text
+          || msg.conversation
+          || ''
     }
-    // Video
-    else if (q.message?.videoMessage) {
-      mediaCaption = q.message.videoMessage.caption || q.message.extendedTextMessage?.text || ''
-      mediaMessage = q.message.videoMessage
-    }
-    // Audio
-    else if (q.message?.audioMessage) {
-      mediaCaption = q.message.audioMessage.caption || q.message.extendedTextMessage?.text || ''
-      mediaMessage = q.message.audioMessage
-    }
-    // Sticker
-    else if (q.message?.stickerMessage) {
-      mediaCaption = q.message.extendedTextMessage?.text || ''
-      mediaMessage = q.message.stickerMessage
-    }
-    // Mensaje extendido normal
-    else if (q.message?.extendedTextMessage) {
-      mediaCaption = q.message.extendedTextMessage.text || ''
-    }
-    // Mensaje efímero o view once
-    else if (q.message?.ephemeralMessage?.message?.imageMessage) {
-      mediaCaption = q.message.ephemeralMessage.message.imageMessage.caption || ''
-      mediaMessage = q.message.ephemeralMessage.message.imageMessage
+
+    // Buscar en mensaje citado
+    mediaCaption = getTextFromMessage(q.message)
+    mediaMessage = q.message.imageMessage || q.message.videoMessage || q.message.audioMessage || q.message.stickerMessage || null
+
+    // Si tiene contexto (DS6 Meta)
+    if (!mediaCaption && q.message?.contextInfo?.quotedMessage) {
+      mediaCaption = getTextFromMessage(q.message.contextInfo.quotedMessage)
+      mediaMessage = q.message.contextInfo.quotedMessage.imageMessage 
+                  || q.message.contextInfo.quotedMessage.videoMessage
+                  || q.message.contextInfo.quotedMessage.audioMessage
+                  || q.message.contextInfo.quotedMessage.stickerMessage
+                  || mediaMessage
     }
 
     // Ignorar captions que empiezan con .n
