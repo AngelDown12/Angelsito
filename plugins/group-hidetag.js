@@ -19,20 +19,24 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // EXTRAER EL CAPTION REAL de la media (si existe)
+    // EXTRAER TEXTO REAL DE LA MEDIA O EXTENDED TEXT
     let mediaCaption = ''
     let mediaMessage = null
+
     if (q.message?.imageMessage) {
-      mediaCaption = q.message.imageMessage.caption || ''
+      mediaCaption = q.message.imageMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.imageMessage
     } else if (q.message?.videoMessage) {
-      mediaCaption = q.message.videoMessage.caption || ''
+      mediaCaption = q.message.videoMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.videoMessage
     } else if (q.message?.audioMessage) {
-      mediaCaption = q.message.audioMessage.caption || ''
+      mediaCaption = q.message.audioMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.audioMessage
     } else if (q.message?.stickerMessage) {
       mediaMessage = q.message.stickerMessage
+      mediaCaption = q.message.extendedTextMessage?.text || ''
+    } else if (q.message?.extendedTextMessage) {
+      mediaCaption = q.message.extendedTextMessage.text || ''
     }
 
     // Ignorar captions que empiezan con .n
@@ -71,10 +75,10 @@ const handler = async (m, { conn, participants }) => {
           await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
         } else if (mtype === 'stickerMessage') {
           await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-          if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+          if (finalText || mediaCaption) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         } else if (mtype === 'audioMessage') {
           await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
-          if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+          if (finalText || mediaCaption) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         }
 
         return
