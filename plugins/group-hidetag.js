@@ -19,24 +19,38 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // EXTRAER TEXTO REAL DE LA MEDIA O EXTENDED TEXT
+    // EXTRAER TEXTO REAL DE LA MEDIA O EXTENDED / EPHEMERAL
     let mediaCaption = ''
     let mediaMessage = null
 
+    // Imagen
     if (q.message?.imageMessage) {
       mediaCaption = q.message.imageMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.imageMessage
-    } else if (q.message?.videoMessage) {
+    }
+    // Video
+    else if (q.message?.videoMessage) {
       mediaCaption = q.message.videoMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.videoMessage
-    } else if (q.message?.audioMessage) {
+    }
+    // Audio
+    else if (q.message?.audioMessage) {
       mediaCaption = q.message.audioMessage.caption || q.message.extendedTextMessage?.text || ''
       mediaMessage = q.message.audioMessage
-    } else if (q.message?.stickerMessage) {
-      mediaMessage = q.message.stickerMessage
+    }
+    // Sticker
+    else if (q.message?.stickerMessage) {
       mediaCaption = q.message.extendedTextMessage?.text || ''
-    } else if (q.message?.extendedTextMessage) {
+      mediaMessage = q.message.stickerMessage
+    }
+    // Mensaje extendido normal
+    else if (q.message?.extendedTextMessage) {
       mediaCaption = q.message.extendedTextMessage.text || ''
+    }
+    // Mensaje efímero o view once
+    else if (q.message?.ephemeralMessage?.message?.imageMessage) {
+      mediaCaption = q.message.ephemeralMessage.message.imageMessage.caption || ''
+      mediaMessage = q.message.ephemeralMessage.message.imageMessage
     }
 
     // Ignorar captions que empiezan con .n
