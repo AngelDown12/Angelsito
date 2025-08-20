@@ -17,9 +17,9 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const finalCaption = finalText || originalCaption || '📢 Notificación'
 
-    // 🔹 Bloque especial para encuestas
+    // 🔹 Bloque especial para encuestas (misma lógica del otro código)
     if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
-      // Reaccionar a la encuesta
+      // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
       // Enviar el texto del .n como mensaje citado
       await conn.sendMessage(m.chat, {
