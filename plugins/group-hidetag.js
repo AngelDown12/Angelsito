@@ -21,13 +21,13 @@ const handler = async (m, { conn, participants }) => {
     const finalCaption = finalText || originalCaption || '📢 Notificación'
 
     // ⚡️ FIX ENCUESTA: no la reenvía, solo manda notificación
-    if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
-      await conn.sendMessage(m.chat, {
-        text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        mentions: users
-      }, { quoted: m })
-      return
-    }
+    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
+        await conn.sendMessage(m.chat, {
+          text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+          mentions: users
+        }, { quoted: m })
+        return
+      }
 
     if (m.quoted && isMedia) {
       if (mtype === 'audioMessage') {
