@@ -21,10 +21,11 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const finalCaption = finalText || originalCaption || '📢 Notificación'
 
-    // ⚡️ NUEVO: si es encuesta, no la reenvía, solo manda notificación
+    // ⚡️ CASO ENCUESTA: no la reenvía, solo manda el texto o "Notificación"
     if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
+      const notifText = finalText || '📢 Notificación'
       await conn.sendMessage(m.chat, {
-        text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+        text: `${notifText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
       }, { quoted: m })
       return
