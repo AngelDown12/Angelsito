@@ -8,15 +8,15 @@ const handler = async (m, { conn, participants }) => {
 
   const userText = content.trim().replace(/^\.?n\s*/i, '') 
   const finalText = userText || '' 
+  const users = participants.map(u => conn.decodeJid(u.id))
 
   try {
-    const users = participants.map(u => conn.decodeJid(u.id))
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // 🔹 Bloque para encuestas: responde con el texto de .n y reacciona
+    // 🔹 Bloque para encuestas: siempre usar el texto de .n y reaccionar
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      const textToSend = finalText.trim() || '📢 Notificación'
+      const textToSend = userText.trim() || '📢 Notificación' // usar directamente el .n
 
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
@@ -30,7 +30,7 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Reaccionar normalmente a cualquier mensaje que no sea encuesta
+    // 🔹 Reaccionar normalmente a cualquier otro mensaje
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
@@ -127,7 +127,6 @@ const handler = async (m, { conn, participants }) => {
     }
 
   } catch (e) {
-    const users = participants.map(u => conn.decodeJid(u.id))
     await conn.sendMessage(m.chat, {
       text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
       mentions: users
