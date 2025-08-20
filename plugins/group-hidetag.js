@@ -6,16 +6,15 @@ const handler = async (m, { conn, participants }) => {
   const content = m.text || m.msg?.caption || ''
   if (!/^.?n(\s|$)/i.test(content.trim())) return
 
-  // ✅ Eliminar prefijo .n o n
-  const userText = content.trim().replace(/^.?n\s*/i, '')
-  const finalText = userText || ''
+  // Eliminar prefijo .n o n
+  const finalText = content.trim().replace(/^.?n\s*/i, '')
   const users = participants.map(u => conn.decodeJid(u.id))
 
   try {
     const q = m.quoted ? m.quoted : m
     let mtype = q.mtype || ''
 
-    // 🔹 Detectar encuestas DS6 Meta en cualquier mensaje
+    // Detectar encuestas DS6 Meta en cualquier mensaje
     if (q.message?.pollCreationMessage) mtype = 'pollCreationMessage'
     if (q.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
@@ -23,7 +22,7 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
-    // 🔹 Si es encuesta → reemplazar texto del mensaje directamente
+    // ENCUESTAS → reemplazar texto directamente usando cMod
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       const msg = conn.cMod(
         m.chat,
@@ -40,10 +39,10 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Reacción 📢 si no es encuesta
+    // Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 Multimedia → conservar captions + agregar tu texto
+    // MULTIMEDIA → conservar captions + agregar tu texto
     if (isMedia) {
       const media = await q.download()
       if (mtype === 'imageMessage') {
@@ -60,24 +59,7 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Mensajes normales → reemplazar texto directamente
-    if (m.quoted) {
-      const msg = conn.cMod(
-        m.chat,
-        generateWAMessageFromContent(
-          m.chat,
-          { [mtype || 'extendedTextMessage']: { text: finalText } },
-          { quoted: q, userJid: conn.user.id }
-        ),
-        captionText,
-        conn.user.jid,
-        { mentions: users }
-      )
-      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
-      return
-    }
-
-    // 🔹 Si no hay mensaje citado ni multimedia → enviar texto normal
+    // MENSAJES NORMALES → enviar solo finalText + firma
     await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
 
   } catch (e) {
