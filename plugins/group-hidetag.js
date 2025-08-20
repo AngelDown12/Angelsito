@@ -17,17 +17,9 @@ const handler = async (m, { conn, participants }) => {
     const mtype = q.mtype || ''
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
+
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const finalCaption = finalText || originalCaption || '📢 Notificación'
-
-    // ⚡️ FIX ENCUESTA: no la reenvía, solo manda notificación
-    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-        await conn.sendMessage(m.chat, {
-          text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-          mentions: users
-        }, { quoted: m })
-        return
-      }
 
     if (m.quoted && isMedia) {
       if (mtype === 'audioMessage') {
