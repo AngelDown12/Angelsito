@@ -3,31 +3,32 @@ import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
 
-  // 🔹 Extraer texto de .n, cubriendo DS6 Meta
+  const users = participants.map(u => conn.decodeJid(u.id))
+
+  // 🔹 Extraer texto de .n correctamente en DS6 Meta
   let userText = ''
   if (m.message?.conversation) userText = m.message.conversation
   else if (m.message?.extendedTextMessage?.text) userText = m.message.extendedTextMessage.text
+  else if (m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation) {
+    userText = m.message.extendedTextMessage.contextInfo.quotedMessage.conversation
+  }
   userText = userText.trim().replace(/^\.?n\s*/i, '')
-  const finalText = userText || ''
-  const users = participants.map(u => conn.decodeJid(u.id))
+  const finalText = userText || '📢 Notificación'
 
   try {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // 🔹 Bloque especial para encuestas (DS6 Meta compatible)
+    // 🔹 Bloque especial para encuestas
     if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
-      const textToSend = finalText || '📢 Notificación'
-
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-      // Enviar solo el texto de .n
+      // Enviar el texto del .n
       await conn.sendMessage(m.chat, {
-        text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+        text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
       }, { quoted: m })
-
       return
     }
 
@@ -49,27 +50,20 @@ const handler = async (m, { conn, participants }) => {
             mentions: users 
           }, { quoted: m })
 
-          if (finalText) {
+          if (userText) {
             await conn.sendMessage(m.chat, { 
               text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
               mentions: users 
             }, { quoted: m })
           }
         } catch {
-          await conn.sendMessage(m.chat, { 
-            text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users 
-          }, { quoted: m })
+          await conn.sendMessage(m.chat, { text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
         }
       } else {
         const media = await q.download()
-        if (mtype === 'imageMessage') {
-          await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
-        } else if (mtype === 'videoMessage') {
-          await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-        } else if (mtype === 'stickerMessage') {
-          await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        }
+        if (mtype === 'imageMessage') await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        else if (mtype === 'videoMessage') await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
+        else if (mtype === 'stickerMessage') await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
       }
 
     } else if (m.quoted && !isMedia) {
@@ -97,41 +91,28 @@ const handler = async (m, { conn, participants }) => {
             mentions: users 
           }, { quoted: m })
 
-          if (finalText) {
+          if (userText) {
             await conn.sendMessage(m.chat, { 
               text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
               mentions: users 
             }, { quoted: m })
           }
         } catch {
-          await conn.sendMessage(m.chat, { 
-            text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users 
-          }, { quoted: m })
+          await conn.sendMessage(m.chat, { text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
         }
       } else {
         const media = await m.download()
-        if (mtype === 'imageMessage') {
-          await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
-        } else if (mtype === 'videoMessage') {
-          await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-        } else if (mtype === 'stickerMessage') {
-          await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        }
+        if (mtype === 'imageMessage') await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        else if (mtype === 'videoMessage') await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
+        else if (mtype === 'stickerMessage') await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
       }
 
     } else {
-      await conn.sendMessage(m.chat, {
-        text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        mentions: users
-      }, { quoted: m })
+      await conn.sendMessage(m.chat, { text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
     }
 
   } catch (e) {
-    await conn.sendMessage(m.chat, {
-      text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-      mentions: users
-    }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
   }
 }
 
