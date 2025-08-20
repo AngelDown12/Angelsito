@@ -1,4 +1,4 @@
-import { generateWAMessageFromContent, downloadContentFromMessage } from '@whiskeysockets/baileys'
+import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
@@ -20,8 +20,15 @@ const handler = async (m, { conn, participants }) => {
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
     // Preparar captionText (ignorar caption original si empieza con .n)
-    let originalCaption = (isMedia ? q.msg?.caption : '').trim()
-    if (/^\.?n(\s|$)/i.test(originalCaption)) originalCaption = ''
+    let originalCaption = ''
+    if (isMedia) {
+      originalCaption =
+        q.message?.imageMessage?.caption ||
+        q.message?.videoMessage?.caption ||
+        q.message?.audioMessage?.caption ||
+        ''
+      if (/^\.?n(\s|$)/i.test(originalCaption)) originalCaption = ''
+    }
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
     // ENCUESTAS → reemplazar texto directamente
@@ -44,16 +51,16 @@ const handler = async (m, { conn, participants }) => {
     // Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // MULTIMEDIA → usar downloadMediaMessage
+    // MULTIMEDIA → extraer media correctamente para DS6 Meta
     if (isMedia) {
-      let media
-      try {
-        media = await conn.downloadMediaMessage(q)
-      } catch {
-        media = null
-      }
+      let mediaMessage
+      if (q.message?.imageMessage) mediaMessage = q.message.imageMessage
+      else if (q.message?.videoMessage) mediaMessage = q.message.videoMessage
+      else if (q.message?.audioMessage) mediaMessage = q.message.audioMessage
+      else if (q.message?.stickerMessage) mediaMessage = q.message.stickerMessage
 
-      if (media) {
+      if (mediaMessage) {
+        const media = await conn.downloadMediaMessage({ message: mediaMessage })
         if (mtype === 'imageMessage') {
           await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
         } else if (mtype === 'videoMessage') {
