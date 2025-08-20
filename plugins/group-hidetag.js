@@ -24,7 +24,7 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const finalCaption = finalText || originalCaption || '📢 Notificación'
 
-    // 🔹 Si es encuesta, solo manda el texto de .n
+    // 🔹 Bloque especial: si es encuesta, solo manda el texto de .n
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       await conn.sendMessage(m.chat, {
         text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
