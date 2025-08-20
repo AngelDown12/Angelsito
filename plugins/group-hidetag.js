@@ -20,13 +20,30 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // 🔹 Encuesta → solo mandar texto + firma
+    // 🔹 Encuesta → mandar texto + firma usando cMod si es mensaje citado
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      await conn.sendMessage(m.chat, {
-        text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        mentions: users
-      }, { quoted: m })
-      return
+      if (m.quoted && !isMedia) {
+        const msg = conn.cMod(
+          m.chat,
+          generateWAMessageFromContent(
+            m.chat,
+            { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalText } },
+            { quoted: m, userJid: conn.user.id }
+          ),
+          `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+          conn.user.jid,
+          { mentions: users }
+        )
+        await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
+        return
+      } else {
+        // Si no es mensaje citado, mandar solo texto normal
+        await conn.sendMessage(m.chat, {
+          text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+          mentions: users
+        }, { quoted: m })
+        return
+      }
     }
 
     // 🔹 Reacción 📢 solo si NO es encuesta
