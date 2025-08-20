@@ -22,53 +22,8 @@ const handler = async (m, { conn, participants }) => {
     const originalCaption = (q.msg?.caption || q.text || '').trim()
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
-    // 🔹 Lógica de encuesta ORIGINAL
-    if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      if (m.quoted) {
-        // usar cMod para reemplazar texto de la encuesta
-        const msg = conn.cMod(
-          m.chat,
-          generateWAMessageFromContent(
-            m.chat,
-            { [mtype]: q.message?.[mtype] || { text: finalText } },
-            { quoted: m, userJid: conn.user.id }
-          ),
-          captionText,
-          conn.user.jid,
-          { mentions: users }
-        )
-        await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
-        return
-      } else {
-        // si no hay mensaje citado, mandar solo texto + firma
-        await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
-        return
-      }
-    }
-
-    // 🔹 Reacción 📢 solo si NO es encuesta
-    await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
-
-    // 🔹 Multimedia → enviar archivo + caption original + texto + firma
-    if (isMedia) {
-      const media = await q.download()
-
-      if (mtype === 'imageMessage') {
-        await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
-      } else if (mtype === 'videoMessage') {
-        await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-      } else if (mtype === 'stickerMessage') {
-        await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
-      } else if (mtype === 'audioMessage') {
-        await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
-      }
-      return
-    }
-
-    // 🔹 Mensajes normales → usar cMod si hay mensaje citado, si no enviar texto normal
-    if (m.quoted && !isMedia) {
+    // 🔹 Si hay mensaje citado, usar cMod para mantener todo intacto (encuestas, texto, multimedia)
+    if (m.quoted) {
       const msg = conn.cMod(
         m.chat,
         generateWAMessageFromContent(
@@ -84,7 +39,27 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // Si no hay mensaje citado ni multimedia, mandar solo texto normal
+    // 🔹 Reacción 📢 solo si no hay mensaje citado
+    await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
+
+    // 🔹 Multimedia sin mensaje citado
+    if (isMedia) {
+      const media = await q.download()
+      if (mtype === 'imageMessage') {
+        await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
+      } else if (mtype === 'videoMessage') {
+        await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
+      } else if (mtype === 'stickerMessage') {
+        await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
+        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+      } else if (mtype === 'audioMessage') {
+        await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
+        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+      }
+      return
+    }
+
+    // 🔹 Si no hay mensaje citado ni multimedia → enviar texto normal
     await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
 
   } catch (e) {
