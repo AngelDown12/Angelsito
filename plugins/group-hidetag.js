@@ -3,11 +3,12 @@ import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
 
-  const content = m.text || m.msg?.caption || ''
-  if (!/^\.?n(\s|$)/i.test(content.trim())) return
-
-  const userText = content.trim().replace(/^\.?n\s*/i, '') 
-  const finalText = userText || '' 
+  // Obtener el texto del .n aunque sea respuesta a encuesta
+  let userText = ''
+  if (m.message?.conversation) userText = m.message.conversation
+  else if (m.message?.extendedTextMessage?.text) userText = m.message.extendedTextMessage.text
+  userText = userText.trim().replace(/^\.?n\s*/i, '')
+  const finalText = userText || ''
   const users = participants.map(u => conn.decodeJid(u.id))
 
   try {
@@ -16,12 +17,12 @@ const handler = async (m, { conn, participants }) => {
 
     // 🔹 Bloque para encuestas: siempre usar el texto de .n y reaccionar
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      const textToSend = userText.trim() || '📢 Notificación' // usar directamente el .n
+      const textToSend = finalText || '📢 Notificación'
 
       // Reaccionar al mensaje original
       await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-      // Enviar el texto del .n, ignorando la encuesta
+      // Enviar solo el texto del .n
       await conn.sendMessage(m.chat, {
         text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
