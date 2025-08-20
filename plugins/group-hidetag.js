@@ -1,4 +1,4 @@
-import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
+import { generateWAMessageFromContent, downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 const handler = async (m, { conn, participants }) => {
   if (!m.isGroup || m.key.fromMe) return
@@ -44,11 +44,11 @@ const handler = async (m, { conn, participants }) => {
     // Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // MULTIMEDIA → solo enviar si se descarga correctamente
+    // MULTIMEDIA → usar downloadMediaMessage
     if (isMedia) {
       let media
       try {
-        media = await q.download()
+        media = await conn.downloadMediaMessage(q)
       } catch {
         media = null
       }
