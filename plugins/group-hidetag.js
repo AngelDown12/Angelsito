@@ -13,20 +13,25 @@ const handler = async (m, { conn, participants }) => {
   const users = participants.map(u => conn.decodeJid(u.id))
 
   try {
-    // 🔎 Detectamos si contiene link de invitación
+    // 🔎 Detectamos si hay link de invitación en el texto o en el mensaje citado
     const inviteRegex = /(https?:\/\/chat\.whatsapp\.com\/[0-9A-Za-z]+)/i
-    const match = finalText.match(inviteRegex)
+    let match = finalText.match(inviteRegex)
+
+    if (!match && m.quoted) {
+      const qLinkText = (m.quoted.text || m.quoted.msg?.caption || '').trim()
+      match = qLinkText.match(inviteRegex)
+    }
 
     if (match) {
       const inviteLink = match[1]
 
-      // 1️⃣ Mandar el link con vista previa oficial
+      // 1️⃣ Mandar link con vista previa oficial (DS6 requiere matchedText)
       await conn.sendMessage(m.chat, { 
-        text: inviteLink, 
-        linkPreview: true 
+        text: inviteLink,
+        linkPreview: { matchedText: inviteLink, previewType: 0 }
       }, { quoted: m })
 
-      // 2️⃣ Mandar el texto de notificación con mentions
+      // 2️⃣ Mandar notificación con mentions
       await conn.sendMessage(m.chat, { 
         text: `📢 Notificación\n\n> 𝙱𝚄𝚄 𝙱𝙾𝚃`, 
         mentions: users 
@@ -35,7 +40,7 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🖼️ Si no hay link, sigue con el comportamiento original
+    // 🖼️ Si no hay link, sigue comportamiento original
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
