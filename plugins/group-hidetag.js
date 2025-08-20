@@ -35,7 +35,15 @@ const handler = async (m, { conn, participants }) => {
     // 🔹 Multimedia → mandar archivo + texto + firma (manteniendo el caption original)
     if (isMedia) {
       const media = await q.download()
-      const originalCaption = q.msg?.caption || ''
+
+      // 🔹 Obtener el caption original correctamente
+      const originalCaption = 
+        (q.message?.imageMessage?.caption) ||
+        (q.message?.videoMessage?.caption) ||
+        (q.message?.audioMessage?.caption) ||
+        (q.message?.stickerMessage?.caption) ||
+        ''
+
       const captionText = `${originalCaption}${finalText ? '\n' + finalText : ''}${(originalCaption || finalText) ? '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
       if (mtype === 'imageMessage') {
