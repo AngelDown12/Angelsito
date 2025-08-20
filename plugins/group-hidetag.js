@@ -6,8 +6,6 @@ const handler = async (m, { conn, participants }) => {
   const content = m.text || m.msg?.caption || ''
   if (!/^\.?n(\s|$)/i.test(content.trim())) return
 
-  await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
-
   const userText = content.trim().replace(/^\.?n\s*/i, '') 
   const finalText = userText || '' 
 
@@ -16,15 +14,24 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     const mtype = q.mtype || ''
 
-    // Bloque para encuestas: ignora la encuesta y usa solo el texto del .n
+    // 🔹 Bloque para encuestas: responde con el texto de .n y reacciona
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
-      const textToSend = finalText || '📢 Notificación'
+      const textToSend = finalText.trim() || '📢 Notificación'
+
+      // Reaccionar al mensaje original
+      await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
+
+      // Enviar el texto del .n, ignorando la encuesta
       await conn.sendMessage(m.chat, {
         text: `${textToSend}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
         mentions: users
       }, { quoted: m })
+
       return
     }
+
+    // 🔹 Reaccionar normalmente a cualquier mensaje que no sea encuesta
+    await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
     const originalCaption = (q.msg?.caption || q.text || '').trim()
