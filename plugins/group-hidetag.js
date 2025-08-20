@@ -6,126 +6,58 @@ const handler = async (m, { conn, participants }) => {
   const content = m.text || m.msg?.caption || ''
   if (!/^\.?n(\s|$)/i.test(content.trim())) return
 
+  // Reacción
   await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
   const userText = content.trim().replace(/^\.?n\s*/i, '') 
-  const finalText = userText || '' 
+  const finalText = userText || '📢 Notificación'
 
   try {
     const users = participants.map(u => conn.decodeJid(u.id))
-    const q = m.quoted ? m.quoted : m
-    const mtype = q.mtype || ''
 
-    const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
+    if (m.quoted) {
+      const q = m.quoted
+      const mtype = q.mtype || ''
+      const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    const originalCaption = (q.msg?.caption || q.text || '').trim()
-    const finalCaption = finalText || originalCaption || '📢 Notificación'
+      // ⚡️ Encuesta: solo manda texto
+      if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
+        await conn.sendMessage(m.chat, {
+          text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
+          mentions: users
+        }, { quoted: m })
+        return
+      }
 
-    // ⚡️ CASO ENCUESTA: no la reenvía, solo manda el texto o "Notificación"
-    if (m.quoted && (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage')) {
-      const notifText = finalText || '📢 Notificación'
-      await conn.sendMessage(m.chat, {
-        text: `${notifText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        mentions: users
-      }, { quoted: m })
+      // Media
+      if (isMedia) {
+        const media = await q.download()
+        let msgContent = {}
+        if (mtype === 'imageMessage') msgContent = { image: media, caption: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }
+        else if (mtype === 'videoMessage') msgContent = { video: media, caption: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }
+        else if (mtype === 'stickerMessage') msgContent = { sticker: media, mentions: users }
+        else if (mtype === 'audioMessage') msgContent = { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }
+
+        await conn.sendMessage(m.chat, msgContent, { quoted: m })
+        // Si hay texto extra, envíalo
+        if (userText && mtype !== 'audioMessage') {
+          await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
+        }
+        return
+      }
+
+      // Texto plano
+      await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
       return
     }
 
-    if (m.quoted && isMedia) {
-      if (mtype === 'audioMessage') {
-        try {
-          const media = await q.download()
-          await conn.sendMessage(m.chat, { 
-            audio: media, 
-            mimetype: 'audio/ogg; codecs=opus', 
-            ptt: true, 
-            mentions: users 
-          }, { quoted: m })
-
-          if (finalText) {
-            await conn.sendMessage(m.chat, { 
-              text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-              mentions: users 
-            }, { quoted: m })
-          }
-        } catch {
-          await conn.sendMessage(m.chat, { 
-            text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users 
-          }, { quoted: m })
-        }
-      } else {
-        const media = await q.download()
-        if (mtype === 'imageMessage') {
-          await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
-        } else if (mtype === 'videoMessage') {
-          await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-        } else if (mtype === 'stickerMessage') {
-          await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        }
-      }
-
-    } else if (m.quoted && !isMedia) {
-      const msg = conn.cMod(
-        m.chat,
-        generateWAMessageFromContent(
-          m.chat,
-          { [mtype || 'extendedTextMessage']: q.message?.[mtype] || { text: finalCaption } },
-          { quoted: m, userJid: conn.user.id }
-        ),
-        `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        conn.user.jid,
-        { mentions: users }
-      )
-      await conn.relayMessage(m.chat, msg.message, { messageId: msg.key.id })
-
-    } else if (!m.quoted && isMedia) {
-      if (mtype === 'audioMessage') {
-        try {
-          const media = await m.download()
-          await conn.sendMessage(m.chat, { 
-            audio: media, 
-            mimetype: 'audio/ogg; codecs=opus', 
-            ptt: true, 
-            mentions: users 
-          }, { quoted: m })
-
-          if (finalText) {
-            await conn.sendMessage(m.chat, { 
-              text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-              mentions: users 
-            }, { quoted: m })
-          }
-        } catch {
-          await conn.sendMessage(m.chat, { 
-            text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, 
-            mentions: users 
-          }, { quoted: m })
-        }
-      } else {
-        const media = await m.download()
-        if (mtype === 'imageMessage') {
-          await conn.sendMessage(m.chat, { image: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
-        } else if (mtype === 'videoMessage') {
-          await conn.sendMessage(m.chat, { video: media, caption: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-        } else if (mtype === 'stickerMessage') {
-          await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        }
-      }
-
-    } else {
-      await conn.sendMessage(m.chat, {
-        text: `${finalCaption}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-        mentions: users
-      }, { quoted: m })
-    }
+    // Caso sin mensaje citado
+    const usersWithoutQuote = participants.map(u => conn.decodeJid(u.id))
+    await conn.sendMessage(m.chat, { text: `${finalText}\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: usersWithoutQuote }, { quoted: m })
 
   } catch (e) {
     const users = participants.map(u => conn.decodeJid(u.id))
-    await conn.sendMessage(m.chat, {
-      text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`,
-      mentions: users
-    }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: `📢 Notificación\n\n${'> 𝙱𝚄𝚄 𝙱𝙾𝚃'}`, mentions: users }, { quoted: m })
   }
 }
 
