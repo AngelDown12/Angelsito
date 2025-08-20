@@ -6,7 +6,6 @@ const handler = async (m, { conn, participants }) => {
   const content = m.text || m.msg?.caption || ''
   if (!/^.?n(\s|$)/i.test(content.trim())) return
 
-  // ✅ Eliminar prefijo .n o n
   const finalText = content.trim().replace(/^.?n\s*/i, '')
   const users = participants.map(u => conn.decodeJid(u.id))
 
@@ -14,18 +13,18 @@ const handler = async (m, { conn, participants }) => {
     const q = m.quoted ? m.quoted : m
     let mtype = q.mtype || ''
 
-    // 🔹 Detectar encuestas DS6 Meta
+    // Detectar encuestas DS6 Meta
     if (q.message?.pollCreationMessage) mtype = 'pollCreationMessage'
     if (q.message?.pollUpdateMessage) mtype = 'pollUpdateMessage'
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // 🔹 Captions multimedia: ignorar si ya empieza con .n
+    // Preparar captionText (ignorar caption original si empieza con .n)
     let originalCaption = (isMedia ? q.msg?.caption : '').trim()
     if (/^\.?n(\s|$)/i.test(originalCaption)) originalCaption = ''
     const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
-    // 🔹 ENCUESTAS → reemplazar texto directamente
+    // ENCUESTAS → reemplazar texto directamente
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
       const msg = conn.cMod(
         m.chat,
@@ -42,30 +41,39 @@ const handler = async (m, { conn, participants }) => {
       return
     }
 
-    // 🔹 Reacción 📢 si no es encuesta
+    // Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // 🔹 MULTIMEDIA → conservar captions (solo si no empiezan con .n) + agregar tu texto
+    // MULTIMEDIA → solo enviar si se descarga correctamente
     if (isMedia) {
-      const media = await q.download()
-      if (mtype === 'imageMessage') {
-        await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
-      } else if (mtype === 'videoMessage') {
-        await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
-      } else if (mtype === 'stickerMessage') {
-        await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
-      } else if (mtype === 'audioMessage') {
-        await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
-        if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+      let media
+      try {
+        media = await q.download()
+      } catch {
+        media = null
       }
-      return
+
+      if (media) {
+        if (mtype === 'imageMessage') {
+          await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
+        } else if (mtype === 'videoMessage') {
+          await conn.sendMessage(m.chat, { video: media, caption: captionText, mentions: users, mimetype: 'video/mp4' }, { quoted: m })
+        } else if (mtype === 'stickerMessage') {
+          await conn.sendMessage(m.chat, { sticker: media, mentions: users }, { quoted: m })
+          if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+        } else if (mtype === 'audioMessage') {
+          await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
+          if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
+        }
+        return
+      }
     }
 
-    // 🔹 MENSAJES NORMALES → enviar solo finalText + firma
+    // MENSAJES NORMALES → enviar solo finalText + firma
     await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
 
   } catch (e) {
+    // Solo enviar "Notificación" en caso de error real
     await conn.sendMessage(m.chat, { text: `📢 Notificación\n\n> 𝙱𝚄𝚄 𝙱𝙾𝚃`, mentions: users }, { quoted: m })
   }
 }
