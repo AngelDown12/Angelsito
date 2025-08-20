@@ -19,17 +19,26 @@ const handler = async (m, { conn, participants }) => {
 
     const isMedia = ['imageMessage','videoMessage','audioMessage','stickerMessage'].includes(mtype)
 
-    // Preparar captionText (ignorar caption original si empieza con .n)
-    let originalCaption = ''
-    if (isMedia) {
-      originalCaption =
-        q.message?.imageMessage?.caption ||
-        q.message?.videoMessage?.caption ||
-        q.message?.audioMessage?.caption ||
-        ''
-      if (/^\.?n(\s|$)/i.test(originalCaption)) originalCaption = ''
+    // EXTRAER EL CAPTION REAL de la media (si existe)
+    let mediaCaption = ''
+    let mediaMessage = null
+    if (q.message?.imageMessage) {
+      mediaCaption = q.message.imageMessage.caption || ''
+      mediaMessage = q.message.imageMessage
+    } else if (q.message?.videoMessage) {
+      mediaCaption = q.message.videoMessage.caption || ''
+      mediaMessage = q.message.videoMessage
+    } else if (q.message?.audioMessage) {
+      mediaCaption = q.message.audioMessage.caption || ''
+      mediaMessage = q.message.audioMessage
+    } else if (q.message?.stickerMessage) {
+      mediaMessage = q.message.stickerMessage
     }
-    const captionText = `${originalCaption ? originalCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
+
+    // Ignorar captions que empiezan con .n
+    if (/^\.?n(\s|$)/i.test(mediaCaption)) mediaCaption = ''
+
+    const captionText = `${mediaCaption ? mediaCaption + '\n' : ''}${finalText ? finalText + '\n\n' : ''}> 𝙱𝚄𝚄 𝙱𝙾𝚃`
 
     // ENCUESTAS → reemplazar texto directamente
     if (mtype === 'pollCreationMessage' || mtype === 'pollUpdateMessage') {
@@ -51,16 +60,11 @@ const handler = async (m, { conn, participants }) => {
     // Reacción 📢 si no es encuesta
     await conn.sendMessage(m.chat, { react: { text: '📢', key: m.key } })
 
-    // MULTIMEDIA → extraer media correctamente para DS6 Meta
-    if (isMedia) {
-      let mediaMessage
-      if (q.message?.imageMessage) mediaMessage = q.message.imageMessage
-      else if (q.message?.videoMessage) mediaMessage = q.message.videoMessage
-      else if (q.message?.audioMessage) mediaMessage = q.message.audioMessage
-      else if (q.message?.stickerMessage) mediaMessage = q.message.stickerMessage
-
-      if (mediaMessage) {
+    // MULTIMEDIA → enviar solo si se descarga correctamente
+    if (isMedia && mediaMessage) {
+      try {
         const media = await conn.downloadMediaMessage({ message: mediaMessage })
+
         if (mtype === 'imageMessage') {
           await conn.sendMessage(m.chat, { image: media, caption: captionText, mentions: users }, { quoted: m })
         } else if (mtype === 'videoMessage') {
@@ -72,6 +76,11 @@ const handler = async (m, { conn, participants }) => {
           await conn.sendMessage(m.chat, { audio: media, mimetype: 'audio/ogg; codecs=opus', ptt: true, mentions: users }, { quoted: m })
           if (finalText) await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         }
+
+        return
+      } catch {
+        // Si falla la descarga, mandar solo texto
+        await conn.sendMessage(m.chat, { text: captionText, mentions: users }, { quoted: m })
         return
       }
     }
