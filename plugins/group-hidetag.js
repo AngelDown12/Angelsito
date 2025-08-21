@@ -119,7 +119,7 @@ const handler = async (m, { conn, participants }) => {
   }
 }
 
-handler.customPrefix = /^.?n(\s|$)/i
+handler.customPrefix = /^(\.n|n)(\s|$)/i
 handler.command = new RegExp
 handler.group = true
 handler.admin = true
