@@ -50,7 +50,7 @@ let handler = async (m, { conn }) => {
   }
 
   if (stiker) {
-    await conn.sendFile(m.chat, stiker, 'sticker.webp', '', m, true)
+    await conn.sendMessage(m.chat, { sticker: { url: stiker }}, { quoted: m })
   }
 }
 
