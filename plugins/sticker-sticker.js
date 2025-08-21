@@ -1,11 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const Crypto = require('crypto');
-const ffmpeg = require('fluent-ffmpeg');
-const webp = require('node-webpmux');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+import fs from 'fs';
+import path from 'path';
+import Crypto from 'crypto';
+import ffmpeg from 'fluent-ffmpeg';
+import webp from 'node-webpmux';
+import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 
-const tempFolder = path.join(__dirname, '../tmp/');
+const tempFolder = path.join(process.cwd(), 'tmp/');
 if (!fs.existsSync(tempFolder)) fs.mkdirSync(tempFolder, { recursive: true });
 
 const handler = async (msg, { conn }) => {
@@ -69,7 +69,7 @@ const handler = async (msg, { conn }) => {
 };
 
 handler.command = ['s'];
-module.exports = handler;
+export default handler;
 
 // === FUNCIONES AUXILIARES ===
 function randomFileName(ext) {
