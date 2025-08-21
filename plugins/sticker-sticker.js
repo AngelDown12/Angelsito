@@ -29,7 +29,7 @@ const handler = async (msg, { conn }) => {
 
     const senderName = msg.pushName || 'Usuario Desconocido';
     const now = new Date();
-    const fechaCreacion = `📅 ${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} 🕒 ${now.getHours()}:${now.getMinutes()}`;
+    const fechaCreacion = ``;
 
     await conn.sendMessage(chatId, {
       react: { text: '🛠️', key: msg.key }
