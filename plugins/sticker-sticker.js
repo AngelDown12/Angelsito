@@ -39,7 +39,7 @@ const handler = async (msg, { conn }) => {
 
     if (!quoted || !mediaType) {
       return await conn.sendMessage(chatId, {
-        text: `⚠️ *Responde a una imagen o video, o envía el comando junto con una imagen/video para crear un sticker.*\n\n✳️ *Ejemplo:* Responde o envía imagen con:\n➤ ${pref}s`
+        text: `☁️ Responde a una *imagen* o *video* para crear el sticker`
       }, { quoted: msg });
     }
 
