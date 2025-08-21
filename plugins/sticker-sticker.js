@@ -13,58 +13,60 @@ const handler = async (msg, { conn }) => {
   const pref = global.prefixes?.[0] || ".";
 
   try {
-    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    // 1. Buscar media en el mensaje directo
+    let quoted = null;
+    let mediaType = null;
+
+    if (msg.message?.imageMessage) {
+      quoted = msg.message;
+      mediaType = "image";
+    } else if (msg.message?.videoMessage) {
+      quoted = msg.message;
+      mediaType = "video";
+    }
+
+    // 2. Si no hay media directa, revisar si hay quoted
     if (!quoted) {
+      const q = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+      if (q?.imageMessage) {
+        quoted = q;
+        mediaType = "image";
+      } else if (q?.videoMessage) {
+        quoted = q;
+        mediaType = "video";
+      }
+    }
+
+    if (!quoted || !mediaType) {
       return await conn.sendMessage(chatId, {
-        text: `⚠️ *Responde a una imagen o video para crear un sticker.*\n\n✳️ *Ejemplo:* Responde a una imagen con:\n➤ ${pref}s`
+        text: `⚠️ *Responde a una imagen o video, o envía el comando junto con una imagen/video para crear un sticker.*\n\n✳️ *Ejemplo:* Responde o envía imagen con:\n➤ ${pref}s`
       }, { quoted: msg });
     }
 
-    const mediaType = quoted.imageMessage ? 'image' : quoted.videoMessage ? 'video' : null;
-    if (!mediaType) {
-      return await conn.sendMessage(chatId, {
-        text: '⚠️ *Solo puedes convertir imágenes o videos en stickers.*'
-      }, { quoted: msg });
-    }
+    await conn.sendMessage(chatId, { react: { text: '🛠️', key: msg.key } });
 
-    const senderName = msg.pushName || 'Usuario Desconocido';
-    const now = new Date();
-    const fechaCreacion = ``;
-
-    await conn.sendMessage(chatId, {
-      react: { text: '🛠️', key: msg.key }
-    });
-
-    const mediaStream = await downloadContentFromMessage(quoted[`${mediaType}Message`], mediaType);
+    // Descargar media
+    const mediaStream = await downloadContentFromMessage(
+      quoted[`${mediaType}Message`],
+      mediaType
+    );
     let buffer = Buffer.alloc(0);
     for await (const chunk of mediaStream) buffer = Buffer.concat([buffer, chunk]);
 
-    const metadata = {
-      packname: ``,
-      author: ``
-    };
+    const metadata = { packname: ``, author: `` };
 
     const sticker = mediaType === 'image'
       ? await writeExifImg(buffer, metadata)
       : await writeExifVid(buffer, metadata);
 
-    await conn.sendMessage(chatId, {
-      sticker: { url: sticker }
-    }, { quoted: msg });
+    await conn.sendMessage(chatId, { sticker: { url: sticker } }, { quoted: msg });
 
-    await conn.sendMessage(chatId, {
-      react: { text: '✅', key: msg.key }
-    });
+    await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } });
 
   } catch (err) {
     console.error('❌ Error en sticker s:', err);
-    await conn.sendMessage(chatId, {
-      text: '❌ *Hubo un error al procesar el sticker. Inténtalo de nuevo.*'
-    }, { quoted: msg });
-
-    await conn.sendMessage(chatId, {
-      react: { text: '❌', key: msg.key }
-    });
+    await conn.sendMessage(chatId, { text: '❌ *Hubo un error al procesar el sticker.*' }, { quoted: msg });
+    await conn.sendMessage(chatId, { react: { text: '❌', key: msg.key } });
   }
 };
 
