@@ -85,5 +85,5 @@ const handler = async (msg, { conn }) => {
   }
 };
 
-handler.command = ["ver"];
+handler.command = ["ver|reenviar"];
 export default handler;
