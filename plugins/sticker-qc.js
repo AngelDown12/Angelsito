@@ -38,8 +38,9 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
         let pp
         try {
             pp = await conn.profilePictureUrl(targetUser, 'image')
+            if (!pp || !pp.startsWith('http')) throw new Error('Invalid URL')
         } catch {
-            pp = 'https://qu.ax/ZJKqt.jpg'
+            pp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
         }
 
         const obj = {
@@ -51,18 +52,17 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             scale: 2,
             messages: [{
                 entities: [],
-                avatar: true,
+                avatar: true, // 🔥 aseguramos que tenga avatar
                 from: {
                     id: 1,
                     name,
-                    photo: { url: pp }
+                    photo: { url: pp } // 🔥 la URL ya validada
                 },
                 text,
                 replyMessage: {}
             }]
         }
 
-        // Reacción mientras se genera
         await conn.sendMessage(m.chat, { react: { text: '🎨', key: m.key } })
 
         let json
@@ -96,7 +96,6 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
 
         if (stiker) {
             await conn.sendFile(m.chat, stiker, 'Quotly.webp', '', m, true, { asSticker: true })
-            // Reacción cuando se manda
             await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
         } else {
             conn.reply(m.chat, '❌ *No se pudo crear el sticker.*', m)
