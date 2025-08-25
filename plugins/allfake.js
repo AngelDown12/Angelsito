@@ -59,7 +59,7 @@ newsletterName: '',
 },
 externalAdReply: { 
 showAdAttribution: true,
-title: '𝗕𝗨𝗨 - 𝘽𝙊𝙏',
+title: '𝘼𝙉𝙂𝙀𝙇 - 𝘽𝙊𝙏',
 body: '',
 previewType: "PHOTO",
 thumbnailUrl: 'https://files.catbox.moe/f4ir6m.jpg',
