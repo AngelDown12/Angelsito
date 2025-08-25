@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { writeExifImg } from '../libs/fuctions.js' // ajusta la ruta si hace falta
+import { writeExifImg } from '../libs/sticker.js' // ajusta la ruta si hace falta
 
 const flagMap = [
   ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
