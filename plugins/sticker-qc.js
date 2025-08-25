@@ -13,18 +13,6 @@ async function niceName(jid, conn, fallback = '') {
   return jid.split('@')[0]
 }
 
-const colors = {
-  rojo: '#FF0000',
-  azul: '#0000FF',
-  morado: '#800080',
-  verde: '#008000',
-  amarillo: '#FFFF00',
-  naranja: '#FFA500',
-  celeste: '#00FFFF',
-  rosado: '#FFC0CB',
-  negro: '#000000'
-}
-
 const handler = async (msg, { conn, args }) => {
   try {
     const chatId = msg.key.remoteJid
@@ -34,13 +22,8 @@ const handler = async (msg, { conn, args }) => {
     const mentioned = ctx?.mentionedJid || []
     const quotedMsg = ctx?.participant
 
-    let targetJid = msg.key.participant || msg.key.remoteJid
-
-    if (mentioned[0]) {
-      targetJid = mentioned[0]
-    } else if (quotedMsg) {
-      targetJid = quotedMsg
-    }
+    // 👉 target será el mencionado o el citado
+    let targetJid = mentioned[0] || quotedMsg || msg.sender
 
     if (!contentFull && !ctx?.quotedMessage) {
       return conn.sendMessage(chatId, {
@@ -48,15 +31,8 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg })
     }
 
-    const firstWord = contentFull.split(' ')[0]?.toLowerCase()
-    const bgColor = colors[firstWord] || colors['negro']
-
-    let content = contentFull
-    if (colors[firstWord]) {
-      content = contentFull.split(' ').slice(1).join(' ').trim()
-    }
-
-    const plain = content.replace(/@[\d\-]+/g, '').trim() || 
+    // Texto sin el @usuario
+    const plain = contentFull.replace(/@[\d\-]+/g, '').trim() ||
                   ctx?.quotedMessage?.conversation || ' '
 
     const displayName = await niceName(targetJid, conn)
@@ -68,7 +44,7 @@ const handler = async (msg, { conn, args }) => {
     const quoteData = {
       type: 'quote',
       format: 'png',
-      backgroundColor: bgColor,
+      backgroundColor: '#000000', // 🔥 Fondo fijo negro (sin países ni colores)
       width: 600,
       height: 900,
       scale: 3,
