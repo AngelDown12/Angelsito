@@ -16,6 +16,6 @@ const handler = async (m, { conn }) => {
 handler.customPrefix = /^(?:\.?kick)(?:\s+|$)/i;
 handler.command = new RegExp();
 handler.group = true;
-handler.admin = false;
+handler.admin = true;
 
 export default handler;
