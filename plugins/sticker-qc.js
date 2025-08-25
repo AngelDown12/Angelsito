@@ -1,107 +1,115 @@
-import axios from 'axios'
 import { sticker } from '../lib/sticker.js'
+import axios from 'axios'
 
-async function niceName(jid, conn, fallback = '') {
-  try {
-    const g = await conn.getName(jid)
-    if (g && g.trim()) return g
-  } catch {}
-  const c = conn.contacts?.[jid]
-  if (c?.notify) return c.notify
-  if (c?.name) return c.name
-  if (fallback && fallback.trim()) return fallback
-  // ✅ si no hay nada, devolver solo el número sin dominio
-  return jid.split('@')[0]
+let handler = async (m, { conn, args, usedPrefix, command }) => {
+    try {
+        let targetUser
+        let text
+
+        if (m.mentionedJid && m.mentionedJid.length > 0) {
+            targetUser = m.mentionedJid[0]
+            text = args.slice(1).join(' ')
+        } 
+        else if (m.quoted) {
+            targetUser = m.quoted.sender
+            text = args.join(' ')
+        } 
+        else {
+            targetUser = m.sender
+            text = args.join(' ')
+        }
+
+        if (!text || !text.trim()) {
+            return conn.reply(m.chat, `☁️ *Agrega un texto para crear el sticker*\n\n📌 Ejemplo:\n${usedPrefix + command} @usuario Hola!`, m)
+        }
+
+        const wordCount = text.trim().split(/\s+/).length
+        if (wordCount > 30) {
+            return conn.reply(m.chat, '⚠️ *Máximo 30 palabras permitidas*', m)
+        }
+
+        let name
+        try {
+            name = await conn.getName(targetUser)
+        } catch {
+            name = 'Usuario'
+        }
+
+        let pp
+        try {
+            pp = await conn.profilePictureUrl(targetUser, 'image')
+        } catch {
+            pp = 'https://qu.ax/ZJKqt.jpg'
+        }
+
+        const obj = {
+            type: "quote",
+            format: "png",
+            backgroundColor: "#000000",
+            width: 512,
+            height: 768,
+            scale: 2,
+            messages: [{
+                entities: [],
+                avatar: true,
+                from: {
+                    id: 1,
+                    name,
+                    photo: { url: pp }
+                },
+                text,
+                replyMessage: {}
+            }]
+        }
+
+        // Reacción mientras se genera
+        await conn.sendMessage(m.chat, { react: { text: '🎨', key: m.key } })
+
+        let json
+        try {
+            json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 15000
+            })
+        } catch (e) {
+            console.error("Error API:", e)
+            return conn.reply(m.chat, '❌ *Error al generar el sticker. Intenta de nuevo más tarde.*', m)
+        }
+
+        if (!json?.data?.result?.image) {
+            return conn.reply(m.chat, '❌ *No se pudo generar el sticker (respuesta inválida)*', m)
+        }
+
+        let buffer
+        try {
+            buffer = Buffer.from(json.data.result.image, 'base64')
+        } catch {
+            return conn.reply(m.chat, '⚠️ *Error al procesar la imagen.*', m)
+        }
+
+        let stiker
+        try {
+            stiker = await sticker(buffer, false, '', '')
+        } catch {
+            return conn.reply(m.chat, '⚠️ *Error al convertir a sticker.*', m)
+        }
+
+        if (stiker) {
+            await conn.sendFile(m.chat, stiker, 'Quotly.webp', '', m, true, { asSticker: true })
+            // Reacción cuando se manda
+            await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
+        } else {
+            conn.reply(m.chat, '❌ *No se pudo crear el sticker.*', m)
+        }
+
+    } catch (err) {
+        console.error("Error handler qc:", err)
+        conn.reply(m.chat, '❌ *Ocurrió un error inesperado.*', m)
+    }
 }
 
-const colors = {
-  rojo: '#FF0000',
-  azul: '#0000FF',
-  morado: '#800080',
-  verde: '#008000',
-  amarillo: '#FFFF00',
-  naranja: '#FFA500',
-  celeste: '#00FFFF',
-  rosado: '#FFC0CB',
-  negro: '#000000'
-}
+handler.help = ['qc']
+handler.tags = ['sticker']
+handler.command = /^(qc)$/i
 
-const handler = async (msg, { conn, args }) => {
-  try {
-    const chatId = msg.key.remoteJid
-    const contentFull = args.join(' ').trim()
-
-    const ctx = msg.message?.extendedTextMessage?.contextInfo
-    const mentioned = ctx?.mentionedJid || []
-    const quotedMsg = ctx?.participant
-
-    let targetJid = msg.key.participant || msg.key.remoteJid
-
-    if (mentioned[0]) {
-      targetJid = mentioned[0]
-    } else if (quotedMsg) {
-      targetJid = quotedMsg
-    }
-
-    if (!contentFull && !ctx?.quotedMessage) {
-      return conn.sendMessage(chatId, {
-        text: `✏️ Usa qc así:\n\n*• qc [texto]*\n*• qc [@user texto]*\n(ó responde a un mensaje con .qc [texto])`
-      }, { quoted: msg })
-    }
-
-    const firstWord = contentFull.split(' ')[0]?.toLowerCase()
-    const bgColor = colors[firstWord] || colors['negro']
-
-    let content = contentFull
-    if (colors[firstWord]) {
-      content = contentFull.split(' ').slice(1).join(' ').trim()
-    }
-
-    const plain = content.replace(/@[\d\-]+/g, '').trim() || 
-                  ctx?.quotedMessage?.conversation || ' '
-
-    const displayName = await niceName(targetJid, conn)
-    let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
-    try { avatar = await conn.profilePictureUrl(targetJid, 'image') } catch {}
-
-    await conn.sendMessage(chatId, { react: { text: '🎨', key: msg.key } })
-
-    const quoteData = {
-      type: 'quote',
-      format: 'png',
-      backgroundColor: bgColor,
-      width: 600,
-      height: 900,
-      scale: 3,
-      messages: [{
-        entities: [],
-        avatar: true,
-        from: { id: 1, name: displayName, photo: { url: avatar } },
-        text: plain,
-        replyMessage: {}
-      }]
-    }
-
-    const { data } = await axios.post(
-      'https://bot.lyo.su/quote/generate',
-      quoteData,
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-
-    const stickerBuf = Buffer.from(data.result.image, 'base64')
-    const finalSticker = await sticker(stickerBuf, false, {
-      packname: 'Azura Ultra 2.0 Bot',
-      author: '𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻'
-    })
-
-    await conn.sendMessage(chatId, { sticker: finalSticker }, { quoted: msg })
-    await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } })
-
-  } catch (e) {
-    console.error('❌ Error en qc:', e)
-    await conn.sendMessage(msg.key.remoteJid, { text: '❌ Error al generar el sticker.' }, { quoted: msg })
-  }
-}
-
-handler.command = ['qc']
 export default handler
