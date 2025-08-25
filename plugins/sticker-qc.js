@@ -47,11 +47,18 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
         let pp
         try {
             let ppUrl = await conn.profilePictureUrl(targetUser, 'image')
-            let resp = await fetch(ppUrl)
-            let buffer = await resp.buffer()
-            pp = await uploadToTelegraph(buffer) // 🔥 ahora siempre será público
+            if (ppUrl) {
+                let resp = await fetch(ppUrl)
+                let buffer = await resp.buffer()
+                pp = await uploadToTelegraph(buffer) // sube foto real
+            }
         } catch {
-            pp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
+            pp = null
+        }
+
+        // Si no tiene foto, usar avatar genérico
+        if (!pp) {
+            pp = 'https://telegra.ph/file/5a52b4ec7edcd3c3fbaec.png'
         }
 
         const obj = {
