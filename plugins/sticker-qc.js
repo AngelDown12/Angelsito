@@ -1,25 +1,6 @@
 import axios from 'axios'
 import { sticker } from '../lib/sticker.js'
 
-const flagMap = [
-  ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
-  ['590', '🇧🇶'], ['509', '🇭🇹'], ['507', '🇵🇦'], ['506', '🇨🇷'],
-  ['505', '🇳🇮'], ['504', '🇭🇳'], ['503', '🇸🇻'], ['502', '🇬🇹'],
-  ['501', '🇧🇿'], ['599', '🇨🇼'], ['597', '🇸🇷'], ['596', '🇬🇫'],
-  ['594', '🇬🇫'], ['592', '🇬🇾'], ['590', '🇬🇵'], ['549', '🇦🇷'],
-  ['58', '🇻🇪'], ['57', '🇨🇴'], ['56', '🇨🇱'], ['55', '🇧🇷'],
-  ['54', '🇦🇷'], ['53', '🇨🇺'], ['52', '🇲🇽'], ['51', '🇵🇪'],
-  ['34', '🇪🇸'], ['1', '🇺🇸']
-]
-
-function numberWithFlag(num) {
-  const clean = num.replace(/[^0-9]/g, '')
-  for (const [code, flag] of flagMap) {
-    if (clean.startsWith(code)) return `${num} ${flag}`
-  }
-  return num
-}
-
 async function niceName(jid, conn, fallback = '') {
   try {
     const g = await conn.getName(jid)
@@ -29,7 +10,7 @@ async function niceName(jid, conn, fallback = '') {
   if (c?.notify && !/^\d+$/.test(c.notify)) return c.notify
   if (c?.name && !/^\d+$/.test(c.name)) return c.name
   if (fallback && fallback.trim() && !/^\d+$/.test(fallback)) return fallback
-  return numberWithFlag(jid.split('@')[0])
+  return jid.split('@')[0]
 }
 
 const colors = {
@@ -49,7 +30,6 @@ const handler = async (msg, { conn, args }) => {
     const chatId = msg.key.remoteJid
     const contentFull = args.join(' ').trim()
 
-    // 📌 detectar menciones
     const ctx = msg.message?.extendedTextMessage?.contextInfo
     const mentioned = ctx?.mentionedJid || []
     const quotedMsg = ctx?.participant
@@ -57,10 +37,8 @@ const handler = async (msg, { conn, args }) => {
     let targetJid = msg.key.participant || msg.key.remoteJid
 
     if (mentioned[0]) {
-      // si mencionas a alguien
       targetJid = mentioned[0]
     } else if (quotedMsg) {
-      // si respondes a un mensaje
       targetJid = quotedMsg
     }
 
@@ -70,7 +48,6 @@ const handler = async (msg, { conn, args }) => {
       }, { quoted: msg })
     }
 
-    // 🎨 color de fondo
     const firstWord = contentFull.split(' ')[0]?.toLowerCase()
     const bgColor = colors[firstWord] || colors['negro']
 
@@ -79,11 +56,9 @@ const handler = async (msg, { conn, args }) => {
       content = contentFull.split(' ').slice(1).join(' ').trim()
     }
 
-    // ❌ quitar @user del texto final
     const plain = content.replace(/@[\d\-]+/g, '').trim() || 
                   ctx?.quotedMessage?.conversation || ' '
 
-    // 👤 nombre y foto reales del user
     const displayName = await niceName(targetJid, conn)
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     try { avatar = await conn.profilePictureUrl(targetJid, 'image') } catch {}
