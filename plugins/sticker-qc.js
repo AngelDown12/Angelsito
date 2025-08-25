@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { sticker } from '../lib/sticker.js' // usamos esta ruta ahora
+import { sticker } from '../lib/sticker.js'
 
 const flagMap = [
   ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
@@ -20,20 +20,7 @@ function numberWithFlag(num) {
   return num
 }
 
-const quotedPush = q => (
-  q?.pushName || q?.sender?.pushName || ''
-)
-
-async function niceName(jid, conn, chatId, qPush, fallback = '') {
-  if (qPush && qPush.trim() && !/^\d+$/.test(qPush)) return qPush
-  if (chatId.endsWith('@g.us')) {
-    try {
-      const meta = await conn.groupMetadata(chatId)
-      const p = meta.participants.find(p => p.id === jid)
-      const n = p?.notify || p?.name
-      if (n && n.trim() && !/^\d+$/.test(n)) return n
-    } catch {}
-  }
+async function niceName(jid, conn, fallback = '') {
   try {
     const g = await conn.getName(jid)
     if (g && g.trim() && !/^\d+$/.test(g) && !g.includes('@')) return g
@@ -60,58 +47,56 @@ const colors = {
 const handler = async (msg, { conn, args }) => {
   try {
     const chatId = msg.key.remoteJid
+    const contentFull = args.join(' ').trim()
+
+    // 📌 detectar menciones
     const ctx = msg.message?.extendedTextMessage?.contextInfo
-    const quoted = ctx?.quotedMessage
+    const mentioned = ctx?.mentionedJid || []
+    const quotedMsg = ctx?.participant
 
     let targetJid = msg.key.participant || msg.key.remoteJid
-    let textQuoted = ''
-    let fallbackPN = msg.pushName || ''
-    let qPushName = ''
 
-    if (quoted && ctx?.participant) {
-      targetJid = ctx.participant
-      textQuoted = quoted.conversation ||
-                   quoted.extendedTextMessage?.text || ''
-      qPushName = quotedPush(quoted)
-      fallbackPN = ''
+    if (mentioned[0]) {
+      // si mencionas a alguien
+      targetJid = mentioned[0]
+    } else if (quotedMsg) {
+      // si respondes a un mensaje
+      targetJid = quotedMsg
     }
 
-    const contentFull = (args.join(' ').trim() || '').trim()
-
-    if (!contentFull && !textQuoted) {
+    if (!contentFull && !ctx?.quotedMessage) {
       return conn.sendMessage(chatId, {
-        text: `✏️ Usa qc así:\n\n*• qc [texto]*\n*• qc [color] [texto]*\n\nColores disponibles:\nrojo, azul, morado, verde, amarillo, naranja, celeste, rosado, negro`
+        text: `✏️ Usa qc así:\n\n*• qc [texto]*\n*• qc [@user texto]*\n(ó responde a un mensaje con .qc [texto])`
       }, { quoted: msg })
     }
 
-    const firstWord = contentFull.split(' ')[0].toLowerCase()
+    // 🎨 color de fondo
+    const firstWord = contentFull.split(' ')[0]?.toLowerCase()
     const bgColor = colors[firstWord] || colors['negro']
 
-    let content = ''
-
+    let content = contentFull
     if (colors[firstWord]) {
-      const afterColor = contentFull.split(' ').slice(1).join(' ').trim()
-      if (afterColor.length > 0) {
-        content = afterColor
-      } else {
-        content = textQuoted || ' '
-      }
-    } else {
-      content = contentFull || textQuoted || ' '
+      content = contentFull.split(' ').slice(1).join(' ').trim()
     }
 
-    const plain = content.replace(/@[\d\-]+/g, '')
+    // ❌ quitar @user del texto final
+    const plain = content.replace(/@[\d\-]+/g, '').trim() || 
+                  ctx?.quotedMessage?.conversation || ' '
 
-    const displayName = await niceName(targetJid, conn, chatId, qPushName, fallbackPN)
-
+    // 👤 nombre y foto reales del user
+    const displayName = await niceName(targetJid, conn)
     let avatar = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
     try { avatar = await conn.profilePictureUrl(targetJid, 'image') } catch {}
 
     await conn.sendMessage(chatId, { react: { text: '🎨', key: msg.key } })
 
     const quoteData = {
-      type: 'quote', format: 'png', backgroundColor: bgColor,
-      width: 600, height: 900, scale: 3,
+      type: 'quote',
+      format: 'png',
+      backgroundColor: bgColor,
+      width: 600,
+      height: 900,
+      scale: 3,
       messages: [{
         entities: [],
         avatar: true,
