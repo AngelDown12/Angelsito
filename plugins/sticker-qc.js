@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { writeExifImg } from '../libs/sticker.js' // ajusta la ruta si hace falta
+import { sticker } from '../lib/sticker.js' // usamos esta ruta ahora
 
 const flagMap = [
   ['598', '🇺🇾'], ['595', '🇵🇾'], ['593', '🇪🇨'], ['591', '🇧🇴'],
@@ -128,12 +128,12 @@ const handler = async (msg, { conn, args }) => {
     )
 
     const stickerBuf = Buffer.from(data.result.image, 'base64')
-    const sticker = await writeExifImg(stickerBuf, {
+    const finalSticker = await sticker(stickerBuf, false, {
       packname: 'Azura Ultra 2.0 Bot',
       author: '𝙍𝙪𝙨𝙨𝙚𝙡𝙡 xz 💻'
     })
 
-    await conn.sendMessage(chatId, { sticker: { url: sticker } }, { quoted: msg })
+    await conn.sendMessage(chatId, { sticker: finalSticker }, { quoted: msg })
     await conn.sendMessage(chatId, { react: { text: '✅', key: msg.key } })
 
   } catch (e) {
