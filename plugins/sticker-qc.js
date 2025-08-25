@@ -17,6 +17,7 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
         let targetUser
         let text
 
+        // Determinar usuario objetivo y texto
         if (m.mentionedJid && m.mentionedJid.length > 0) {
             targetUser = m.mentionedJid[0]
             text = args.slice(1).join(' ')
@@ -28,6 +29,7 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             text = args.join(' ')
         }
 
+        // Validar texto
         if (!text || !text.trim()) {
             return conn.reply(m.chat, `☁️ *Agrega un texto para crear el sticker*\n\n📌 Ejemplo:\n${usedPrefix + command} @usuario Hola!`, m)
         }
@@ -37,6 +39,7 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             return conn.reply(m.chat, '⚠️ *Máximo 30 palabras permitidas*', m)
         }
 
+        // Obtener nombre del usuario
         let name
         try {
             name = await conn.getName(targetUser)
@@ -44,6 +47,7 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             name = 'Usuario'
         }
 
+        // Obtener foto de perfil
         let pp
         try {
             let ppUrl = await conn.profilePictureUrl(targetUser, 'image')
@@ -58,9 +62,10 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
 
         // Si no tiene foto, usar avatar genérico
         if (!pp) {
-            pp = 'https://telegra.ph/file/5a52b4ec7edcd3c3fbaec.png'
+            pp = 'https://files.catbox.moe/jknpio.jpg'
         }
 
+        // Preparar objeto para generar quote
         const obj = {
             type: "quote",
             format: "png",
@@ -81,8 +86,10 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             }]
         }
 
+        // Reacción de creación
         await conn.sendMessage(m.chat, { react: { text: '🎨', key: m.key } })
 
+        // Generar quote
         let json = await axios.post('https://bot.lyo.su/quote/generate', obj, {
             headers: { 'Content-Type': 'application/json' },
             timeout: 15000
@@ -92,6 +99,7 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
             return conn.reply(m.chat, '❌ *No se pudo generar el sticker (respuesta inválida)*', m)
         }
 
+        // Convertir a sticker y enviar
         let buffer = Buffer.from(json.data.result.image, 'base64')
         let stiker = await sticker(buffer, false, '', '')
 
