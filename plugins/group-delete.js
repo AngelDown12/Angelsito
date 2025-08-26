@@ -14,17 +14,22 @@ let handler = async (m, { conn }) => {
     await conn.sendMessage(m.chat, { 
       delete: { remoteJid: m.chat, fromMe: false, id: stanzaId, participant } 
     })
+
+    await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
+
   } catch {
     try {
       await conn.sendMessage(m.chat, { delete: m.quoted.vM.key })
+      await conn.sendMessage(m.chat, { react: { text: '✅', key: m.key } })
     } catch {
       return conn.reply(m.chat, '☁️ No se pudo eliminar el mensaje.', m, rcanal)
     }
   }
 }
-handler.customPrefix = /^(?:\.del|del)$/i
-handler.command = new RegExp;
-handler.group = true;
-handler.admin = true;
 
-export default handler;
+handler.customPrefix = /^(?:\.del|del)$/i
+handler.command = new RegExp
+handler.group = true
+handler.admin = true
+
+export default handler
